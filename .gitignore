@@ -12,3 +12,10 @@
 
 # Ignore JSON Lines files
 *.jsonl
+
+data/
+*.db
+*.csv
+*.jsonl
+__pycache__/
+.ipynb_checkpoints/
