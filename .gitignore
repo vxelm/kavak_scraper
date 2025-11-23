@@ -1,0 +1,14 @@
+# Ignore CSV files
+*.csv
+
+# Ignore environment files
+*.env
+
+# Ignore configuration files
+*.conf
+
+# Ignore database files
+*.db
+
+# Ignore JSON Lines files
+*.jsonl
