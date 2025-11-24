@@ -84,16 +84,12 @@ def save_to_jsonl(data, filename):
         f.write('\n') # Salto de línea crucial para JSONL
 
 # --- ORQUESTADOR PRINCIPAL ---
-def run_pipeline(max_pages=1):
+def run_pipeline(start=1, end=245):
     print(f"🚀 Iniciando Pipeline ETL Kavak...")
     
-    # Limpiamos el archivo previo si existe (opcional)
-    if os.path.exists(OUTPUT_FILE):
-        os.remove(OUTPUT_FILE)
-
     total_extracted = 0
 
-    for page in range(max_pages):
+    for page in range(start, end + 1):
         # 1. EXTRACT (Discovery)
         urls = get_car_urls(page)
         print(f"   found {len(urls)} autos. Procesando...")
@@ -126,4 +122,4 @@ def run_pipeline(max_pages=1):
 
 if __name__ == "__main__":
     # Probamos con 1 sola página para validar flujo completo
-    run_pipeline(max_pages=50)
+    run_pipeline(start=53, end=54)

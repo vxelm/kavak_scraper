@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # 1. EL ALMACÉN DE DATOS (Postgres)
+  warehouse:
+    image: postgres:15-alpine
+    container_name: kavak_postgres
+    environment:
+      POSTGRES_USER: admin_data
+      POSTGRES_PASSWORD: root_password_seguro
+      POSTGRES_DB: kavak_db
+    ports:
+      - "5432:5432"  # Puerto Host : Puerto Contenedor
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data_network
+
+  # 2. LA INTERFAZ DE GESTIÓN (pgAdmin)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: kavak_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@kavak.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - warehouse
+    networks:
+      - data_network
+
+# Definición de volúmenes persistentes y redes
+volumes:
+  postgres_data:
+
+networks:
+  data_network:
+    driver: bridge
