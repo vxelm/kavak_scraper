@@ -17,12 +17,8 @@ HEADERS = {
 }
 
 
-def get_robust_session():
+def get_session():
     session = requests.Session()
-    # Configurar reintentos:
-    # total=3: Intenta 3 veces antes de rendirse.
-    # backoff_factor=1: Espera 1s, luego 2s, luego 4s (exponencial) entre errores.
-    # status_forcelist: Si recibe error 500, 502, 503 o 504, reintenta.
     retry = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     adapter = HTTPAdapter(max_retries=retry)
     session.mount('http://', adapter)
@@ -30,7 +26,7 @@ def get_robust_session():
     return session
 
 # Variable global para reutilizar la conexión (TCP Keep-Alive)
-http = get_robust_session()
+http = get_session()
 
 def get_car_urls(page_number):
     """Obtiene las URLs de una página específica"""
@@ -38,7 +34,6 @@ def get_car_urls(page_number):
     print(f"\n📄 Crawling Página {page_number}: {target_url}")
     
     try:
-        #response = requests.get(target_url, headers=HEADERS, timeout=10)
         response = http.get(target_url, headers=HEADERS, timeout=20)
 
         if response.status_code != 200: return []
