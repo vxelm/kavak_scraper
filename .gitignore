@@ -13,6 +13,9 @@
 # Ignore JSON Lines files
 *.jsonl
 
+#  Ignore config files
+config/
+
 data/
 *.db
 *.csv
