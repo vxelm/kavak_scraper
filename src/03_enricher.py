@@ -1,20 +1,31 @@
+
 import os
 import json
 import time
 import random
 import requests
 import pandas as pd
+from glob import glob
 from datetime import datetime
 
 
 # Aseguramos que existan las carpetas antes de guardar
 os.makedirs('../config/logs', exist_ok=True)
-os.makedirs('../data/csv', exist_ok=True)
+os.makedirs('../data/processed/csv/financial_data', exist_ok=True)
+
+json_files = glob('../data/processed/json/*.jsonl')
+json_files.sort()
+
 
 # Configuracion
-current_time = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
-logs_path = f"../config/logs/logs_{current_time}.log"
-csv_path = f"../data/csv/data_{current_time}.csv"
+timestamp = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
+logs_path = f"../config/logs/logs_{timestamp}.log"
+
+csv_path = f"../data/processed/csv/financial_data_{timestamp}.csv"
+
+json_path = json_files[-1]
+print(json_path)
+
 
 # Example: 'https://www.kavak.com/api/vip-ui/mx/calculator/468814?upfront-amount=116499'
 FINANCITAL_API = 'https://www.kavak.com/api/vip-ui/mx/calculator'
@@ -29,17 +40,24 @@ def get_minimum_upfront_amount(price):
     return float(price) * 0.16
 
 
+def get_fresh_session():
+    """Crea una sesion nueva, limpiando asi los headers y cookies"""
+    s = requests.Session()
+    s.headers.update(HEADERS)
+    return s
+
+
 def log_writer(message):
     """Maneja los mensajes de registro en a traves de las distintas funciones"""
-    current_time = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
+    timestamp = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
     try:
         with open(logs_path, 'a', encoding='utf-8') as f:
-            f.write(f"{current_time} " + message + '\n')
+            f.write(f"{timestamp} " + message + '\n')
     except Exception as e:
-        print("No se pudo escribir el log: {e}")
+        print(f"No se pudo escribir el log: {e}")
 
 
-def api_requester(auto_id, headers, price):
+def api_requester(auto_id, headers, price, session):
     """Realiza las peticiones a la API Financiera de Kavak para obtener los distintos planes de financiamiento."""
     api_url = f"{FINANCITAL_API}/{auto_id}"
     upfront_amount = int(get_minimum_upfront_amount(price))
@@ -48,7 +66,7 @@ def api_requester(auto_id, headers, price):
     }
     
     try:
-        response = requests.get(api_url, headers=headers, params=query_params)
+        response = session.get(api_url, headers=headers, params=query_params, timeout=10)
         response.raise_for_status()
         return response
 
@@ -64,14 +82,14 @@ def plan_info_extractor(plan, auto_id):
     try:
         mensualidades = plan['installments']
         enganche = plan['value']
-        tasa = plan['rate']
+        tasa_interes = plan['rate']
 
         if plan['insurance']:
             seguro = plan['insurance']['installmentAmount']
         else: 
             seguro = None
         
-        return mensualidades, enganche, tasa, seguro
+        return mensualidades, enganche, tasa_interes, seguro
     
     except Exception as e:
         log_writer(f"Sucedio un error extrayendo los planes del auto: {auto_id}: {e}")
@@ -97,16 +115,23 @@ def extract_financial_info(auto_id, paymentPlans, inputData, price):
         para obtener la info de los planes y el enganche y devuelve todo en una lista de diccionarios."""
 
     data_plan_list = []
-    value, min_upfront_value, max_upfront_value = upfront_info_extractor(inputData, auto_id)
 
-    for plan in paymentPlans:
-        plazo, mensualidad, tasa, seguro = plan_info_extractor(plan, auto_id)
+    upfront_data =  upfront_info_extractor(inputData, auto_id)
+    if not upfront_data:
+        return []
+    
+    value, min_upfront_value, max_upfront_value = upfront_data
+
+    for plan in paymentPlans:        
+        plazo, mensualidad, tasa_interes, seguro = plan_info_extractor(plan, auto_id)      
+
         data_dict = {
             'ID_Auto':auto_id,
             'Precio':price,
+            'Tasa_Servicio': round(float(price) * 0.05),
             'Plazo':plazo,
             'Mensualidad':mensualidad, 
-            'Tasa':tasa, 
+            'Tasa_Interes':tasa_interes, 
             'Seguro':seguro,
             'Enganche_Simulado':value, 
             'Enganche_Min':min_upfront_value, 
@@ -135,29 +160,38 @@ def save_batch_to_csv(batch_data, path):
 
 def main():
     batch_buffer = []
-    BATCH_SIZE = 20
+    BATCH_SIZE = 10
 
-    with open('../data/dataset_autos.jsonl', 'r', encoding='utf-8') as f:
+    current_session = get_fresh_session()
+    print("Sesion inical creada.")
+
+    with open(json_path, 'r', encoding='utf-8') as f:
         for i, line in enumerate(f):
-            
+   
+            if i > 0 and i % 50 == 0:
+                print(f"Renovando sesion y limiando rastros (Auto #{i})")
+                current_session.close()
+                time.sleep(2)
+                current_session = get_fresh_session()
+
             car = json.loads(line)
-            id = car['id']
+            car_id = car['id']
             slug = car['slug']
             price = car['price']
-            print(f"{i} Extrayendo datos para el ID: {id}, {slug}, {price}")
-   
+            print(f"{i} Extrayendo datos para el ID: {car_id}, {slug}, {price}")
+
             # Definimos el referer y los agregamos a los headers
-            referer = slug + "?" + "id=" + id
+            referer = slug + "?" + "id=" + car_id
             headers_copy = HEADERS.copy()
             headers_copy['Referer'] = referer
 
             # Simulamos una demora antes de cada request a la API
             time.sleep(random.uniform(1.5, 4))
-            response = api_requester(id, headers_copy, price)
+            response = api_requester(car_id, headers_copy, price, session=current_session)
             
 
             if response is None:
-                log_writer(f"No se obtuvo respuesta para el auto con ID: {id}")
+                log_writer(f"No se obtuvo respuesta para el auto con ID: {car_id}")
                 continue
 
             
@@ -168,19 +202,19 @@ def main():
                     paymentPlans = data_json['offers']['paymentPlan']['paymentOptions']['UPFRONT_VALUE']
                     inputData = data_json['offers']['inputData']
 
-                    planes_extraidos = extract_financial_info(id, paymentPlans, inputData, price)
+                    planes_extraidos = extract_financial_info(car_id, paymentPlans, inputData, price)
                     batch_buffer.extend(planes_extraidos)
 
                 except Exception as e:
-                    log_writer(f"No se encontro un llave para el carro: {id}")    
+                    log_writer(f"No se encontro un llave para el carro: {car_id}: {e}")    
                     continue
 
             else: 
-                print(f"Auto no disponible {id}")
-                log_writer(f"Auto no disponible {id}")
+                print(f"Auto no disponible {car_id}")
+                log_writer(f"Auto no disponible {car_id}")
                 continue
     
-            if (i % BATCH_SIZE) == 0:
+            if len(batch_buffer) >= (BATCH_SIZE * 6):
                 print(f"Buffer lleno ({len(batch_buffer)} registros). Guardando batch...")
                 save_batch_to_csv(batch_buffer, csv_path)
                 batch_buffer = []
