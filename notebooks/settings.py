@@ -4,7 +4,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 DATA_DIR = BASE_DIR / "data"
 RAW_HTML_DIR = DATA_DIR / "raw" / "html"
-PROCESSED_JSON_DIR = DATA_DIR / "data" / "processed" / "json"
+PROCESSED_JSON_DIR = DATA_DIR / "processed" / "json"
+RAW_JSON_DIR = DATA_DIR / "raw" / "json"
 LOGGING_DIR  = BASE_DIR / "config" / "logs"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
