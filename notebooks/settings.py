@@ -3,7 +3,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 DATA_DIR = BASE_DIR / "data"
-RAW_DATA = BASE_DIR / "raw"
+RAW_DATA = DATA_DIR / "raw"
 PROCESSED_DATA = BASE_DIR / "processed"
 
 RAW_HTML_DIR = RAW_DATA / "html"
