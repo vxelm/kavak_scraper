@@ -87,18 +87,17 @@ def extract_subtitle(card: Tag, car_id: str) -> Optional[Dict]:
     subtitle_tag = card.find(class_=SUBTITLE_PATTERN)
     if subtitle_tag: 
         try:
-            subtitle = subtitle_tag.get_text(strip=True)
-            year = int(subtitle[0].strip())
-            km = int(subtitle[1].lower().replace('km', '').replace(',', '').strip())
-            details = subtitle[2].strip()
-            shift = subtitle[3].strip()
+            subtitle_parts = [part.strip() for part in subtitle_tag.get_text(strip=True).split('•')]
+            year = int(subtitle_parts[0])
+            km = int(subtitle_parts[1].lower().replace('km', '').replace(',', '').strip())
+            details = subtitle_parts[2].strip()
+            shift = subtitle_parts[3].strip()
             
         except (ValueError, IndexError, AttributeError) as e:
             logger.warning("El auto ID: %s no tiene un dato. Error: %s", car_id, e)
             return None
             
         subtitle_elements = dict(
-                subtitle=subtitle,
                 year=year,
                 km=km,
                 details=details,
@@ -129,7 +128,7 @@ def main(htmls_path):
         for file in htmls_path:
             html = read_html(file)  
             cards = get_cards(html) 
-            print(len(cards), f"tarjetas encontradas en el html: {file}")
+            logger.info("%s tarjetas encontradas en el html: %s", len(cards), file)
             
             for c in cards:
                 car_id = c['data-testid'].replace('-', ' ').split()[-1]
@@ -165,14 +164,14 @@ if __name__ == '__main__':
     directories = glob(f'{settings.RAW_HTML_DIR}/*/', recursive=False)
     
     if not directories:
-        print("No se encontraron carpetas en la ruta.")
+        logger.warning("No se encontraron carpetas en la ruta.")
         sys.exit()
 
     directories.sort()
     last_dir = directories[-1]
     
     html_filenames_path = glob(f"{last_dir}*.html")
-    print(f"Utilizando ultima carpeta: '{last_dir}'")
+    logger.info("Utilizando ultima carpeta: %s", last_dir)
     main(html_filenames_path)
 
 

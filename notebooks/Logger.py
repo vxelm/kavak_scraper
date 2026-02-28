@@ -2,15 +2,13 @@ import logging
 from settings import LOGGING_DIR
 from pathlib import Path
 from datetime import datetime
-from glob import glob
-
-def get_last_log():
-    
 
 def setup_logging():
-    timestamp = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
-    log_filename = f"logs_{timestamp}.log"
-    log_path = Path(LOGGING_DIR) / filename
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    
+    log_filename = f"kavak_pipeline_{today_date}.log"
+    log_path = Path(LOGGING_DIR) / log_filename
+    
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     logging.basicConfig(
