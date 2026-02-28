@@ -2,8 +2,8 @@ import logging
 from settings import LOGGING_DIR
 from pathlib import Path
 
-def setup_logging():
-    log_path = Path(LOGGING_DIR) / "pipeline.log"
+def setup_logging(filename: str):
+    log_path = Path(LOGGING_DIR) / filename
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     logging.basicConfig(
