@@ -55,13 +55,16 @@ def get_cards(html: BeautifulSoup) -> List[Tag]:
     ]
 
 
-def extract_price(card: Tag) -> Optional[int]:
+def extract_price(card: Tag, car_id: str) -> Optional[int]:
     # Encontramos el precio del vehiculo en la card, si no tiene continua con la siguiente iteracion.
-    span_price = card.find(class_=SPAN_PRICE_PATTERN)
-    if span_price:
-        price = int(span_price.string.replace(',', '').strip())
-    else: return None
-    return price
+    price_span = card.find(class_=SPAN_PRICE_PATTERN)
+    if price_span:
+        try:
+            price = int(price_span.get_text(strip=True).replace(',', ''))
+            return price
+        except (ValueError, AttributeError) as e:
+            logger.warning("El auto con id: %s no tiene precio. Error: %s", car_id, e)
+    return None
 
 
 def extract_city(card: Tag, car_id: str) -> Optional[str]:
@@ -75,23 +78,24 @@ def extract_city(card: Tag, car_id: str) -> Optional[str]:
 
         except AttributeError as e:
             logger.warning("El auto con id: %s no tiene ciudad. Error: %s", car_id, e)
-            return None
+    return None
 
 
-def extract_subtitle(card: Tag) -> Optional[Dict]:
+def extract_subtitle(card: Tag, car_id: str) -> Optional[Dict]:
     # Extraccion del subtitulo con anio, Kilometraje, Engine y Tipo de caja 
     # "subtitulo": ["2019 ", " 71,021 km ", " 2.0 EX AUTO ", " Autom\u00e1tico"]
-    subtitle = card.find(class_=SUBTITLE_PATTERN)
-    if subtitle: 
+    subtitle_tag = card.find(class_=SUBTITLE_PATTERN)
+    if subtitle_tag: 
         try:
-            subtitle = subtitle.string.split('•')
+            subtitle = subtitle_tag.string.split('•')
             year = int(subtitle[0].strip())
             km = int(subtitle[1].lower().replace('km', '').replace(',', '').strip())
             details = subtitle[2].strip()
             shift = subtitle[3].strip()
             
-        except (ValueError, IndexError):
-            year, km, details, shift = None, None, None, None
+        except (ValueError, IndexError) as e:
+            logger.warning("El auto ID: %s no tiene un dato. Error: %s", car_id, e)
+            subtitle, year, km, details, shift = None, None, None, None, None
     
         subtitle_elements = dict(
                 subtitle=subtitle,
@@ -101,6 +105,7 @@ def extract_subtitle(card: Tag) -> Optional[Dict]:
                 shift=shift
             )
         return subtitle_elements
+    return None
 
 
 def extract_banner(card: Tag) -> int:
@@ -133,9 +138,9 @@ def main(htmls_path):
                     id_set_autos.add(car_id)
 
                     slug = c['href']
-                    price = extract_price(c)
+                    price = extract_price(c, car_id)
                     city = extract_city(c, car_id)
-                    subtitle = extract_subtitle(c)
+                    subtitle = extract_subtitle(c, car_id)
                     hot_sale_flag = extract_banner(c)
                     
                     if subtitle:
@@ -157,33 +162,17 @@ def main(htmls_path):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    directories = glob(f'{settings.RAW_HTML_DIR}/*/', recursive=False)
     
-    parser.add_argument(
-        '--path', 
-        type=str,
-        required=False,
-        help='Ruta de los archivos HTML'
-        )
+    if not directories:
+        print("No se encontraron carpetas en la ruta.")
+        sys.exit()
+
+    directories.sort()
+    last_dir = directories[-1]
     
-    args = parser.parse_args([])
-
-    if not args.path:
-        directories = glob(f'{settings.RAW_HTML_DIR}/*/', recursive=False)
-        
-        if not directories:
-            print("No se encontraron carpetas en la ruta.")
-            sys.exit()
-
-        directories.sort()
-        last_dir = directories[-1]
-        
-        html_filenames_path = glob(f"{last_dir}*.html")
-        print(f"Utilizando ultima carpeta: '{last_dir}'")
-        main(html_filenames_path)
-        
-    else:
-        path = glob(f"{args.path}/*.html")
-        main(path)
+    html_filenames_path = glob(f"{last_dir}*.html")
+    print(f"Utilizando ultima carpeta: '{last_dir}'")
+    main(html_filenames_path)
 
 
