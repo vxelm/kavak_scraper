@@ -87,16 +87,16 @@ def extract_subtitle(card: Tag, car_id: str) -> Optional[Dict]:
     subtitle_tag = card.find(class_=SUBTITLE_PATTERN)
     if subtitle_tag: 
         try:
-            subtitle = subtitle_tag.string.split('•')
+            subtitle = subtitle_tag.get_text(strip=True)
             year = int(subtitle[0].strip())
             km = int(subtitle[1].lower().replace('km', '').replace(',', '').strip())
             details = subtitle[2].strip()
             shift = subtitle[3].strip()
             
-        except (ValueError, IndexError) as e:
+        except (ValueError, IndexError, AttributeError) as e:
             logger.warning("El auto ID: %s no tiene un dato. Error: %s", car_id, e)
-            subtitle, year, km, details, shift = None, None, None, None, None
-    
+            return None
+            
         subtitle_elements = dict(
                 subtitle=subtitle,
                 year=year,

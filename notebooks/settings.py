@@ -4,7 +4,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 DATA_DIR = BASE_DIR / "data"
 RAW_DATA = DATA_DIR / "raw"
-PROCESSED_DATA = BASE_DIR / "processed"
+PROCESSED_DATA = DATA_DIR / "processed"
 
 RAW_HTML_DIR = RAW_DATA / "html"
 RAW_JSON_DIR = RAW_DATA / "json"
