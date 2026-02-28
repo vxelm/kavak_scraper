@@ -105,7 +105,7 @@ def plan_info_extractor(plan: Dict, auto_id: str):
         return None, None, None, None
 
 
-def upfront_info_extractor(inputData: Dict[str, any], auto_id: str) -> Optional[Tuple[int, int, int]]:
+def upfront_info_extractor(inputData: Dict[str, Any], auto_id: str) -> Optional[Tuple[int, int, int]]:
     """Extrae el valor del enganche simulado, el enganche minimo y enganche maximo"""
 
     try:
@@ -119,7 +119,7 @@ def upfront_info_extractor(inputData: Dict[str, any], auto_id: str) -> Optional[
         return None
 
 
-def extract_financial_info(auto_id: str, paymentPlans: Dict[str, any], inputData: Dict[str, Any], price: int) -> Optional[List]:
+def extract_financial_info(auto_id: str, paymentPlans: Dict[str, Any], inputData: Dict[str, Any], price: int) -> Optional[List]:
     """Maneja plan_info_extractor() y upfront_info_extractor() 
         para obtener la info de los planes y el enganche y devuelve todo en una lista de diccionarios."""
 
@@ -135,13 +135,13 @@ def extract_financial_info(auto_id: str, paymentPlans: Dict[str, any], inputData
         plans_info = plan_info_extractor(plan, auto_id)
         if not plans_info:
             continue   
-        plan, mensualidad, tasa_interes, seguro = plan_info_extractor(plan, auto_id)
+        plazo, mensualidad, tasa_interes, seguro = plan_info_extractor(plan, auto_id)
 
         data_dict = {
             'ID_Auto':auto_id,
             'Precio':price,
             'Tasa_Servicio': round(float(price) * 0.05),
-            'Plazo':plan,
+            'Plazo':plazo,
             'Mensualidad':mensualidad, 
             'Tasa_Interes':tasa_interes, 
             'Seguro':seguro,
