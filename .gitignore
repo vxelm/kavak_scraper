@@ -17,6 +17,7 @@
 config/
 
 data/
+logs/
 *.db
 *.csv
 *.jsonl

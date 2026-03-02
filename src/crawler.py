@@ -7,7 +7,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Optional
-from Logger import setup_logging
+from logger import setup_logging
 
 # Configuracion
 TIMESTAMP = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')

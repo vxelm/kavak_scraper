@@ -9,7 +9,7 @@ PROCESSED_DATA = DATA_DIR / "processed"
 RAW_HTML_DIR = RAW_DATA / "html"
 RAW_JSON_DIR = RAW_DATA / "json"
 PROCESSED_JSON_DIR = PROCESSED_DATA / "json"
-LOGGING_DIR  = BASE_DIR / "config" / "logs"
+LOGGING_DIR  = BASE_DIR / "logs"
 FINANCIAL_DATA_DIR = PROCESSED_DATA / "csv" / "financial_data"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)

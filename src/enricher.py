@@ -7,7 +7,7 @@ import settings
 import pandas as pd
 import logging
 import sys
-from Logger import setup_logging
+from logger import setup_logging
 from glob import glob
 from typing import Optional, Tuple, Dict, Set, List, Any
 from datetime import datetime

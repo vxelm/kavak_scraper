@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
-from Logger import setup_logging
+from logger import setup_logging
 from glob import glob
 from typing import List, Dict, Optional
 from bs4.element import Tag
