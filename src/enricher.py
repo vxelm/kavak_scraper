@@ -1,4 +1,3 @@
-
 import os
 import json
 import time
@@ -135,7 +134,7 @@ def extract_financial_info(auto_id: str, paymentPlans: Dict[str, Any], inputData
         plans_info = plan_info_extractor(plan, auto_id)
         if not plans_info:
             continue   
-        plazo, mensualidad, tasa_interes, seguro = plan_info_extractor(plan, auto_id)
+        plazo, mensualidad, tasa_interes, seguro = plans_info
 
         data_dict = {
             'ID_Auto':auto_id,
@@ -252,10 +251,8 @@ def main():
             logger.info("Guardando últimos registros pendientes...")
             save_batch_to_csv(batch_buffer, CSV_PATH)
             
-            print("Proceso Terminado...")
+            logger.info("Proceso Terminado...")
 
 
 if __name__ == '__main__':
     main()
-
-

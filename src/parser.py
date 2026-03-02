@@ -1,4 +1,3 @@
-
 from bs4 import BeautifulSoup
 from datetime import datetime
 from Logger import setup_logging
@@ -9,7 +8,6 @@ import logging
 import settings
 import pandas as pd
 import json
-import argparse
 import sys
 import re
 
@@ -21,7 +19,7 @@ SUBTITLE_PATTERN = re.compile(".*Product__subtitle.*")
 BANNER_PATTERN = re.compile("Precio imbatible")
 
 
-setup_logging("logs_2026_02_28-14h_44m")
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +58,8 @@ def extract_price(card: Tag, car_id: str) -> Optional[int]:
     price_span = card.find(class_=SPAN_PRICE_PATTERN)
     if price_span:
         try:
-            price = int(price_span.get_text(strip=True).replace(',', ''))
+            price_text = price_span.get_text(strip=True).replace(',', '').replace('$', '')
+            price = int(price_text)
             return price
         except (ValueError, AttributeError) as e:
             logger.warning("El auto con id: %s no tiene precio. Error: %s", car_id, e)
@@ -173,5 +172,3 @@ if __name__ == '__main__':
     html_filenames_path = glob(f"{last_dir}*.html")
     logger.info("Utilizando ultima carpeta: %s", last_dir)
     main(html_filenames_path)
-
-
