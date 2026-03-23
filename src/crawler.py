@@ -5,18 +5,22 @@ import random
 import time
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 from datetime import datetime
 from typing import Optional
 from logger import setup_logging
 
-# Configuracion
-TIMESTAMP = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
-SAVE_DIR = os.path.join(settings.RAW_HTML_DIR, TIMESTAMP)
-os.makedirs(SAVE_DIR, exist_ok=True)
-logging_filename = f"logs_{TIMESTAMP}.log"
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+thread_local = threading.local()
+
+
+def get_session() -> requests.Session:
+    if not hasattr(thread_local, "session"):
+        thread_local.session = requests.Session()
+    return thread_local.session
 
 
 def generate_filepath(base_path: str, page_num: int) -> str:
@@ -53,39 +57,46 @@ def download_page(session: requests.Session, url: str, page_num: int) -> Optiona
         return None
 
 
-def process_page_workflow(page_num: int) -> None:
-    filepath = generate_filepath(SAVE_DIR, page_num)
+
+def process_page_workflow(page_num: int, save_dir: str) -> None:
+    filepath = generate_filepath(save_dir, page_num)
 
     if os.path.exists(filepath):
         logger.info("Pagina %s ya existe, Saltando", page_num)
         return
     
-    with requests.Session() as session:
-        html_content = download_page(session, settings.BASE_URL, page_num)
+    session = get_session()
+    html_content = download_page(session=session, url=settings.BASE_URL, page_num=page_num)
 
     if html_content:
         save_to_disk(filepath, html_content)
 
 
 def main(start, end):
-    logging.info("Iniciando crawler concurrente de pag %s a %s...", start, end)
+    # Configuracion
+    TIMESTAMP = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
+    save_dir = os.path.join(settings.RAW_HTML_DIR, TIMESTAMP)
+    os.makedirs(save_dir, exist_ok=True)
+
+    logger.info("Iniciando crawler concurrente de pag %s a %s...", start, end)
     
     futures = []
     with ThreadPoolExecutor(max_workers=settings.MAX_WORKERS) as executor:
         for page in range(start, end + 1):
             logger.info("Descargando pagina %s", page)
             try:
-                future = executor.submit(process_page_workflow, page)
+                future = executor.submit(process_page_workflow, page, save_dir)
                 futures.append(future)
             except Exception as e:
-                logging.info("Sucedio un error", e)        
+                logger.error("Sucedio un error: %s", e)        
 
     for future in as_completed(futures):
         try:
             result = future.result()
-            #logging.info("Resultado: %s", result)
+            #logger.info("Resultado: %s", result)
         except Exception as e:
-            logging.info("Un hilo genero una excepcion")
+            logger.error("Un hilo genero una excepcion: %s", e)
+
 
 
 if __name__ == "__main__":
@@ -94,3 +105,5 @@ if __name__ == "__main__":
 
     else:
         main(start=1, end=2)
+
+
