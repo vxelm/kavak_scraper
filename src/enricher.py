@@ -3,23 +3,19 @@ import json
 import time
 import random
 import requests
-import settings
 import pandas as pd
 import logging
 import sys
-from logger import setup_logging
 from glob import glob
 from typing import Optional, Tuple, Dict, Set, List, Any
 from datetime import datetime
+from src import settings
+from src.logger import setup_logging
 
 
 # Configurando logger
 setup_logging()
 logger = logging.getLogger(__name__)
-
-
-TIMESTAMP = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
-CSV_PATH = f"{settings.FINANCIAL_DATA_DIR}/financial_data_{TIMESTAMP}.csv"
 
 
 # Example: 'https://www.kavak.com/api/vip-ui/mx/calculator/468814?upfront-amount=116499'
@@ -183,7 +179,9 @@ def load_processed_ids(csv_path: str) -> Set:
 
 def main():
     batch_buffer = []
-    json_path = get_json_path()   
+    json_path = get_json_path()
+    TIMESTAMP = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
+    CSV_PATH = f"{settings.FINANCIAL_DATA_DIR}/financial_data_{TIMESTAMP}.csv" 
     
     current_session = get_fresh_session()
     logger.info("Sesion inical creada.")
