@@ -1,5 +1,5 @@
 import logging
-from settings import LOGGING_DIR
+from src.settings import LOGGING_DIR
 from pathlib import Path
 from datetime import datetime
 
