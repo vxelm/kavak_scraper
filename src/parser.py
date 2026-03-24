@@ -1,14 +1,17 @@
+import sys
+import os
+
+from src import settings
+from src.logger import setup_logging
+
 from bs4 import BeautifulSoup
 from datetime import datetime
-from logger import setup_logging
 from glob import glob
 from typing import List, Dict, Optional
 from bs4.element import Tag
-import logging
-import settings
 import pandas as pd
+import logging
 import json
-import sys
 import re
 
 
@@ -32,7 +35,7 @@ def get_date_filename(html_filename: str) -> str:
     if match:
         fecha = match.group()
     else:
-        print(f"Advertencia: No se encontró fecha en '{html_filename}', usando fecha actual.")
+        logger.warning("Advertencia: No se encontró fecha en '%s', usando fecha actual.", html_filename)
         fecha = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
     
     return fecha
@@ -54,7 +57,7 @@ def get_cards(html: BeautifulSoup) -> List[Tag]:
 
 
 def extract_price(card: Tag, car_id: str) -> Optional[int]:
-    # Encontramos el precio del vehiculo en la card, si no tiene continua con la siguiente iteracion.
+    """Encontramos el precio del vehiculo en la card, si no tiene continua con la siguiente iteracion."""
     price_span = card.find(class_=SPAN_PRICE_PATTERN)
     if price_span:
         try:
@@ -67,7 +70,6 @@ def extract_price(card: Tag, car_id: str) -> Optional[int]:
 
 
 def extract_city(card: Tag, car_id: str) -> Optional[str]:
-    # Extraccion de ciudad
     city_tag = card.find(class_=FOOTER_PATTERN)
     if city_tag:
         try:
@@ -81,29 +83,25 @@ def extract_city(card: Tag, car_id: str) -> Optional[str]:
 
 
 def extract_subtitle(card: Tag, car_id: str) -> Optional[Dict]:
-    # Extraccion del subtitulo con anio, Kilometraje, Engine y Tipo de caja 
+    """Extraccion del subtitulo con anio, Kilometraje, Engine y Tipo de caja """
     # "subtitulo": ["2019 ", " 71,021 km ", " 2.0 EX AUTO ", " Autom\u00e1tico"]
+    subtitle_elements = {"year": None, "km": None, "details": None, "shift": None}
     subtitle_tag = card.find(class_=SUBTITLE_PATTERN)
     if subtitle_tag: 
         try:
             subtitle_parts = [part.strip() for part in subtitle_tag.get_text(strip=True).split('•')]
-            year = int(subtitle_parts[0])
-            km = int(subtitle_parts[1].lower().replace('km', '').replace(',', '').strip())
-            details = subtitle_parts[2].strip()
-            shift = subtitle_parts[3].strip()
+
+            subtitle_elements["year"] = int(subtitle_parts[0])
+            subtitle_elements["km"] = int(subtitle_parts[1].lower().replace('km', '').replace(',', '').strip())
+            subtitle_elements["details"] = subtitle_parts[2].strip()
+
+            if len(subtitle_parts) > 3:
+                subtitle_elements["shift"] = subtitle_parts[3].strip()
             
         except (ValueError, IndexError, AttributeError) as e:
             logger.warning("El auto ID: %s no tiene un dato. Error: %s", car_id, e)
-            return None
-            
-        subtitle_elements = dict(
-                year=year,
-                km=km,
-                details=details,
-                shift=shift
-            )
-        return subtitle_elements
-    return None
+
+    return subtitle_elements
 
 
 def extract_banner(card: Tag) -> int:
@@ -141,7 +139,7 @@ def main(htmls_path):
                     subtitle = extract_subtitle(c, car_id)
                     hot_sale_flag = extract_banner(c)
                     
-                    if subtitle:
+                    if price:
                         f.write(
                             json.dumps(
                                 {"id":car_id, 

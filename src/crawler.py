@@ -1,8 +1,5 @@
 import sys
 import os
-
-sys.path.append(os.path.abspath('..'))
-
 from src import settings
 from src.logger import setup_logging
 
@@ -16,10 +13,12 @@ from datetime import datetime
 from typing import Optional
 
 
+
 setup_logging()
 logger = logging.getLogger(__name__)
 
 thread_local = threading.local()
+
 
 
 def get_session() -> requests.Session:
@@ -28,8 +27,10 @@ def get_session() -> requests.Session:
     return thread_local.session
 
 
+
 def generate_filepath(base_path: str, page_num: int) -> str:
     return os.path.join(base_path, f"pagina_{page_num}.html")
+
 
 
 def save_to_disk(filepath: str, content: str) -> None:
@@ -41,6 +42,7 @@ def save_to_disk(filepath: str, content: str) -> None:
     except Exception as e:
         logger.error("Error escribiendo en disco %s: %s", filepath, e)
         raise
+
 
 
 def download_page(session: requests.Session, url: str, page_num: int) -> Optional[str]:
@@ -77,6 +79,7 @@ def process_page_workflow(page_num: int, save_dir: str) -> None:
         save_to_disk(filepath, html_content)
 
 
+
 def main(start, end):
     # Configuracion
     TIMESTAMP = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
@@ -107,6 +110,7 @@ def main(start, end):
 if __name__ == "__main__":
     if not hasattr(settings, 'BASE_URL'):
         logging.critical("Falta BASE_URL en settings.py")
+        sys.exit(1)
 
     else:
         main(start=1, end=2)
