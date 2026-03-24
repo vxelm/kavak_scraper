@@ -1,14 +1,19 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath('..'))
+
+from src import settings
+from src.logger import setup_logging
+
 import logging
-import settings
 import requests
 import random
 import time
-import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 from datetime import datetime
 from typing import Optional
-from logger import setup_logging
 
 
 setup_logging()
