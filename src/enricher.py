@@ -83,22 +83,19 @@ def api_requester(auto_id: str, slug: str, price: int, session: requests.Session
 def plan_info_extractor(plan: Dict, auto_id: str):
     """Extrae mensualidaes, enganche, tasa y seguro del plan que se le pase."""
     
+    info = {'plazo': None, 'enganche': None, 'tasa_interes': None, 'seguro': None}
+
     try:
-        mensualidades = plan['installments']
-        enganche = plan['value']
-        tasa_interes = plan['rate']
+        info['plazo'] = plan['installments']
+        info['enganche'] = plan['value']
+        info['tasa_interes'] = plan['rate']
 
         if plan['insurance']:
-            seguro = plan['insurance']['installmentAmount']
-        else: 
-            seguro = None
-        
-        return mensualidades, enganche, tasa_interes, seguro
-    
+            info['seguro'] = plan['insurance']['installmentAmount']
+
     except Exception as e:
         logger.error("Sucedio un error extrayendo los planes del auto: %s. Error: %s", auto_id, e)
-        return None, None, None, None
-
+    return info
 
 def upfront_info_extractor(inputData: Dict[str, Any], auto_id: str) -> Optional[Tuple[int, int, int]]:
     """Extrae el valor del enganche simulado, el enganche minimo y enganche maximo"""
@@ -126,28 +123,22 @@ def extract_financial_info(auto_id: str, paymentPlans: Dict[str, Any], inputData
     
     value, min_upfront_value, max_upfront_value = upfront_data
 
-    for plan in paymentPlans:     
-        plans_info = plan_info_extractor(plan, auto_id)
-        if not plans_info:
-            continue   
-        plazo, mensualidad, tasa_interes, seguro = plans_info
-
-        data_dict = {
-            'ID_Auto':auto_id,
-            'Precio':price,
+    return [
+        {
+            'ID_Auto': auto_id,
+            'Precio': price,
             'Tasa_Servicio': round(float(price) * 0.05),
-            'Plazo':plazo,
-            'Mensualidad':mensualidad, 
-            'Tasa_Interes':tasa_interes, 
-            'Seguro':seguro,
-            'Enganche_Simulado':value, 
-            'Enganche_Min':min_upfront_value, 
-            'Enganche_Max':max_upfront_value
-            }
 
-        data_plan_list.append(data_dict)
-
-    return data_plan_list
+            'Plazo': plans_info['plazo'],
+            'Mensualidad': plans_info['enganche'], 
+            'Tasa_Interes': plans_info['tasa_interes'], 
+            'Seguro': plans_info['seguro'],
+            'Enganche_Simulado': value, 
+            'Enganche_Min': min_upfront_value, 
+            'Enganche_Max': max_upfront_value
+        }
+        for plan in paymentPlans
+        if (plans_info := plan_info_extractor(plan, auto_id)) and plans_info['plazo']]
 
 
 def save_batch_to_csv(batch_data: List, path: str) -> None:
