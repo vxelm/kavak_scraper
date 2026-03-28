@@ -1,19 +1,16 @@
+import logging
 import sys
-import os
+import re
+
 
 from src import settings
 from src.logger import setup_logging
-
+from src.schemas import Autokavak
 from bs4 import BeautifulSoup
 from datetime import datetime
 from glob import glob
 from typing import List, Dict, Optional
 from bs4.element import Tag
-import pandas as pd
-import logging
-import json
-import re
-from schemas import Autokavak
 
 
 #Patterns 
@@ -22,7 +19,7 @@ FOOTER_PATTERN = re.compile(".*product_cardProduct__footerInfo.*")
 SUBTITLE_PATTERN = re.compile(".*Product__subtitle.*")
 BANNER_PATTERN = re.compile("Precio imbatible")
 
-
+# Configurando logger
 setup_logging()
 logger = logging.getLogger(__name__)
 
@@ -115,7 +112,8 @@ def extract_banner(card: Tag) -> int:
 
 
 def main(htmls_path):
-    """Si no se le pasa un archivo json, tomara el ultimo"""
+    
+    # Si no se le pasa un archivo json, tomara el ultimo
     date_filename = get_date_filename(htmls_path[0])
     filename = date_filename + ".jsonl"
     json_raw_path = settings.RAW_JSON_DIR / filename

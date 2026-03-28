@@ -1,16 +1,17 @@
-import os
-import json
-import time
-import random
-import requests
-import pandas as pd
-import logging
-import sys
-from glob import glob
 from typing import Optional, Tuple, Dict, Set, List, Any
+from src.logger import setup_logging
 from datetime import datetime
 from src import settings
-from src.logger import setup_logging
+from glob import glob
+
+import pandas as pd
+import requests
+import logging
+import random
+import json
+import time
+import sys
+import os
 
 
 # Configurando logger
@@ -114,8 +115,6 @@ def upfront_info_extractor(inputData: Dict[str, Any], auto_id: str) -> Optional[
 def extract_financial_info(auto_id: str, paymentPlans: Dict[str, Any], inputData: Dict[str, Any], price: int) -> Optional[List]:
     """Maneja plan_info_extractor() y upfront_info_extractor() 
         para obtener la info de los planes y el enganche y devuelve todo en una lista de diccionarios."""
-
-    data_plan_list = []
 
     upfront_data =  upfront_info_extractor(inputData, auto_id)
     if not upfront_data:

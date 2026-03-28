@@ -1,19 +1,19 @@
-import sys
-import os
-from src import settings
-from src.logger import setup_logging
-
-import logging
-import requests
-import random
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
+from src.logger import setup_logging
+from src import settings
 from datetime import datetime
 from typing import Optional
 
+import threading
+import requests
+import logging
+import random
+import time
+import sys
+import os
 
 
+# Configurando logger
 setup_logging()
 logger = logging.getLogger(__name__)
 
@@ -114,5 +114,3 @@ if __name__ == "__main__":
 
     else:
         main(start=1, end=2)
-
-
