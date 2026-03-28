@@ -1,3 +1,4 @@
+from sqlmodel import Field, Session, SQLModel, create_engine
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
@@ -17,3 +18,21 @@ class Autokavak(BaseModel):
     gear: Optional[str] = None
     discount_offer: int = Field(default=0, ge=0, le=1)
     details: Optional[str] = None
+
+
+
+class Autokavak_table(SQLModel, table=True):
+    #NO nulos NO Nones
+    id: str = Field(primary_key=True)
+    slug: str
+    city: str
+
+    #Datos necesarios para el negocio
+    price: int 
+    year: int 
+    km: int 
+
+    #Datos que pueden ser nulos o vacios
+    gear: str | None
+    discount_offer: int = Field(default=0)
+    details: Optional[str] | None = None

@@ -46,6 +46,7 @@ def save_to_disk(filepath: str, content: str) -> None:
 
 
 def download_page(session: requests.Session, url: str, page_num: int) -> Optional[str]:
+    """Descarga las paginas usando la session creada"""
     target_url = f"{url}?page={page_num}"
     try:
         time.sleep(random.uniform(1,3))
@@ -66,6 +67,7 @@ def download_page(session: requests.Session, url: str, page_num: int) -> Optiona
 
 
 def process_page_workflow(page_num: int, save_dir: str) -> None:
+    """Orquesta la session, la descarga y el guardado de la pagina"""
     filepath = generate_filepath(save_dir, page_num)
 
     if os.path.exists(filepath):

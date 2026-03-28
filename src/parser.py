@@ -2,15 +2,16 @@ import logging
 import sys
 import re
 
+from typing import List, Dict, Optional
+from datetime import datetime
+from bs4 import BeautifulSoup
+from pydantic import ValidationError
+from bs4.element import Tag
+from glob import glob
 
-from src import settings
 from src.logger import setup_logging
 from src.schemas import Autokavak
-from bs4 import BeautifulSoup
-from datetime import datetime
-from glob import glob
-from typing import List, Dict, Optional
-from bs4.element import Tag
+from src import settings
 
 
 #Patterns 
@@ -161,7 +162,6 @@ def main(htmls_path):
 
                 except ValidationError as e:
                     logger.error("Datos corruptos en auto %s. Error: %s", car_id, e.errors())
-
 
 
 
