@@ -119,7 +119,6 @@ def main(htmls_path):
     date_filename = get_date_filename(htmls_path[0])
     filename = date_filename + ".jsonl"
     json_raw_path = settings.RAW_JSON_DIR / filename
-    quarentine_cars = []
 
     with open(json_raw_path, 'w', encoding='utf-8') as f:
         id_set_autos = set()
@@ -157,10 +156,13 @@ def main(htmls_path):
                     )
 
                     f.write(
-                        json.dumps(auto_valido) + '\n'
+                        auto_valido.model_dump_json() + '\n'
                     )
+                    if len(id_set_autos) % 100 == 0:
+                        f.flush()
+
                 except ValidationError as e:
-                    logger.error("Datos corruptos en auto %s. Error: %s", {car_id}, e.errors())
+                    logger.error("Datos corruptos en auto %s. Error: %s", car_id, e.errors())
 
 
 
