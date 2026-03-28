@@ -13,6 +13,7 @@ import pandas as pd
 import logging
 import json
 import re
+from schemas import Autokavak
 
 
 #Patterns 
@@ -118,6 +119,7 @@ def main(htmls_path):
     date_filename = get_date_filename(htmls_path[0])
     filename = date_filename + ".jsonl"
     json_raw_path = settings.RAW_JSON_DIR / filename
+    quarentine_cars = []
 
     with open(json_raw_path, 'w', encoding='utf-8') as f:
         id_set_autos = set()
@@ -130,31 +132,37 @@ def main(htmls_path):
             for c in cards:
                 car_id = c['data-testid'].replace('-', ' ').split()[-1]
                 
-                if car_id not in id_set_autos:
-                    id_set_autos.add(car_id)
+                if car_id in id_set_autos:
+                    continue    
 
-                    slug = c['href']
-                    price = extract_price(c, car_id)
-                    city = extract_city(c, car_id)
-                    subtitle = extract_subtitle(c, car_id)
-                    hot_sale_flag = extract_banner(c)
-                    
-                    if price:
-                        f.write(
-                            json.dumps(
-                                {"id":car_id, 
-                                "slug":slug,
-                                "city": city, 
-                                "price":price, 
-                                "year" : subtitle['year'],
-                                "km": subtitle['km'],
-                                "gear": subtitle['shift'],
-                                "discount_offer": hot_sale_flag,
-                                "details": subtitle['details']
-                                }) + '\n')
-                else:
-                    logger.info("ID %s ya escaneado", car_id)
-                    continue
+                id_set_autos.add(car_id)
+
+                slug = c['href']
+                price = extract_price(c, car_id)
+                city = extract_city(c, car_id)
+                subtitle = extract_subtitle(c, car_id)
+                hot_sale_flag = extract_banner(c)
+                
+                try:
+                    auto_valido = Autokavak(
+                        id=car_id,
+                        slug=slug,
+                        city=city,
+                        price=price,
+                        year=subtitle.get('year'),
+                        km=subtitle.get('km'),
+                        gear=subtitle.get('shift'),
+                        discount_offer=hot_sale_flag,
+                        details=subtitle.get('details')
+                    )
+
+                    f.write(
+                        json.dumps(auto_valido) + '\n'
+                    )
+                except ValidationError as e:
+                    logger.error("Datos corruptos en auto %s. Error: %s", {car_id}, e.errors())
+
+
 
 
 if __name__ == '__main__':
