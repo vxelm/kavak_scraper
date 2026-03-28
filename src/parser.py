@@ -105,7 +105,7 @@ def extract_subtitle(card: Tag, car_id: str) -> Optional[Dict]:
 
 
 def extract_banner(card: Tag) -> int:
-    # Extraccion de banners
+    """Extraccion de banners"""
     hot_sale_flag = 0
     banner = card.find(string=BANNER_PATTERN)
     if banner:
