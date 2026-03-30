@@ -1,7 +1,8 @@
-from sqlmodel import Field, Session, SQLModel, create_engine, Relationship
+from sqlmodel import Field, SQLModel,Relationship
+from datetime import date
 from typing import Optional
 
-class PlanFinanciero(SQLModel, table=True):
+class FinancialPlan(SQLModel, table=True):
     #PK autoincremental
     id: int | None = Field(default=None, primary_key=True)
     
@@ -18,6 +19,8 @@ class PlanFinanciero(SQLModel, table=True):
     enganche_simulado: float
     enganche_min: float
     enganche_max: float
+
+    fecha_captura: date = Field(default_factory=date.today)
 
     #Relacion el 'auto' al que pertenece este plan
     auto: "Auto" = Relationship(back_populates="planes")
@@ -40,4 +43,4 @@ class Auto(SQLModel, table=True):
     details: Optional[str] | None = None
 
     #Lista de planes financieros que pertenecen al auto
-    planes: list[PlanFinanciero] = Relationship(back_populates="auto")
+    planes: list[FinancialPlan] = Relationship(back_populates="auto")

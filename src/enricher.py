@@ -1,10 +1,15 @@
 from typing import Optional, Tuple, Dict, Set, List, Any
-from src.logger import setup_logging
-from datetime import datetime
-from src import settings
+from datetime import date
 from glob import glob
 
-import pandas as pd
+from src.models import Auto, FinancialPlan
+from pydantic import ValidationError
+
+from src.logger import setup_logging
+from src.database import engine, create_db_n_tables
+from sqlmodel import Session, select
+from src import settings
+
 import requests
 import logging
 import random
@@ -30,7 +35,8 @@ BATCH_SIZE = 60 # 6 Registros de planes por cada 10 autos
 
 
 # Configuracion
-def get_json_path() -> Optional[str]:
+def get_raw_json_path() -> Optional[str]:
+    """Retorna el ultimo archivo json en el directorio de datos crudos"""
     JSON_FILES = glob(f"{settings.RAW_JSON_DIR}/*.jsonl")
     JSON_FILES.sort()
     
@@ -98,9 +104,9 @@ def plan_info_extractor(plan: Dict, auto_id: str):
         logger.error("Sucedio un error extrayendo los planes del auto: %s. Error: %s", auto_id, e)
     return info
 
+
 def upfront_info_extractor(inputData: Dict[str, Any], auto_id: str) -> Optional[Tuple[int, int, int]]:
     """Extrae el valor del enganche simulado, el enganche minimo y enganche maximo"""
-
     try:
         value = inputData['value']
         min_upfront_value = inputData['min']
@@ -124,121 +130,149 @@ def extract_financial_info(auto_id: str, paymentPlans: Dict[str, Any], inputData
 
     return [
         {
-            'ID_Auto': auto_id,
-            'Precio': price,
-            'Tasa_Servicio': round(float(price) * 0.05),
+            'id_auto': auto_id,
+            'precio': price,
+            'tasa_servicio': round(float(price) * 0.05),
 
-            'Plazo': plans_info['plazo'],
-            'Mensualidad': plans_info['enganche'], 
-            'Tasa_Interes': plans_info['tasa_interes'], 
-            'Seguro': plans_info['seguro'],
-            'Enganche_Simulado': value, 
-            'Enganche_Min': min_upfront_value, 
-            'Enganche_Max': max_upfront_value
+            'plazo': plans_info['plazo'],
+            'mensualidad': plans_info['enganche'], 
+            'tasa_interes': plans_info['tasa_interes'], 
+            'seguro': plans_info['seguro'],
+            'enganche_simulado': value, 
+            'enganche_min': min_upfront_value, 
+            'enganche_max': max_upfront_value
         }
         for plan in paymentPlans
         if (plans_info := plan_info_extractor(plan, auto_id)) and plans_info['plazo']]
 
 
-def save_batch_to_csv(batch_data: List, path: str) -> None:
+def save_batch_to_db(batch_data: List, db_session: Session) -> None:
     """Maneja los batches para su guardado cuando se supera el BATCH_SIZE definido como limite."""
     if not batch_data:
         return
-    
     try:
-        df = pd.DataFrame(batch_data)
-        write_headers = not os.path.exists(path)
-        df.to_csv(path, mode='a', index=False, header=write_headers, encoding='utf-8-sig')
-        logger.info("Batch de %s filas guardado.", len(batch_data))
-
+        db_session.add_all(batch_data)
+        db_session.commit()
     except Exception as e:
         logger.error("Error al intentar guardar los datos del batch: %s", e)
 
 
-def load_processed_ids(csv_path: str) -> Set:
-    if not os.path.exists(csv_path):
-        return set()
-    
+def load_financial_plan(car_id: str, plan: Dict) -> Optional[FinancialPlan]:
+    """
+    Toma el diccionario crudo del JSON, intenta instanciar el plan financiero de SQLModel.
+    Si faltan datos o hay un error de validación, lo registra y devuelve None.
+    """
     try:
-        df = pd.read_csv(csv_path, usecols=['ID_Auto'])
-        return set(df['ID_Auto'].astype(str))
-    except Exception as e:
-        logger.warning("No se pudo leer historial %s", e)
-        return set()
+        new_plan = FinancialPlan(
+            **plan
+        )
+        return new_plan
+    except ValidationError as e:
+        logger.warning("El auto con id: %s tiene los datos incompletos o corruptos: %s", car_id, e)
+
+
+
+def load_new_car(car: Dict) -> Optional[Auto]:
+    """
+    Toma el diccionario crudo del JSON, intenta instanciar el plan financiero de SQLModel.
+    Si faltan datos o hay un error de validación, lo registra y devuelve None.
+    """
+    try:
+        new_car = Auto(
+            **car
+        )
+        return new_car
+    
+    except ValidationError as e:
+        logger.warning("El auto con id: %s tiene los datos incompletos o corruptos: %s", car['id'], e)
 
 
 def main():
+    #Aseguramos que la DDBB exista
+    create_db_n_tables()
+
     batch_buffer = []
-    json_path = get_json_path()
-    TIMESTAMP = datetime.now().strftime('%Y_%m_%d-%Hh_%Mm')
-    CSV_PATH = f"{settings.FINANCIAL_DATA_DIR}/financial_data_{TIMESTAMP}.csv" 
-    
+    raw_json_path = get_raw_json_path()
     current_session = get_fresh_session()
     logger.info("Sesion inical creada.")
-    processed_ids = load_processed_ids(CSV_PATH)
-
-    with open(json_path, 'r', encoding='utf-8') as f:
+    
+    with open(raw_json_path, 'r', encoding='utf-8') as f, Session(engine) as db_session:
         for i, line in enumerate(f):
-               
+            if i>=5:
+                logger.info("Smoke test finalizado. Deteniendo ejecucion")
+                break
+
+            # Maneja la sesion para no quemarla
             if i > 0 and i % 50 == 0:
                 logger.info("Renovando sesion y limpiando rastros (Auto #%s)", i)
                 current_session.close()
                 time.sleep(2)
                 current_session = get_fresh_session()
 
-            
-            car = json.loads(line)
-            try:
-                car_id = car['id']
-                slug = car['slug']
-                price = int(car['price'])
-                logger.info("%s Extrayendo datos para el ID: %s, %s, %s", i, car_id, slug, price)
-
-            except KeyError as e:
-                logger.error("%s: La linea %s del json no pudo ser cargada", e, i)
-                continue
-           
-            if str(car_id) in processed_ids:
-                logger.info("Auto %s ya procesado. Saltando.", car_id)
+            # Checks data car integrity            
+            car_json = json.loads(line)
+            car_temporal = load_new_car(car_json)
+            if not car_temporal:
                 continue
 
-            # Simulamos una demora antes de cada request a la API
-            time.sleep(random.uniform(1.5, 4))
-            response = api_requester(car_id, slug, price, session=current_session)
-            
+            car_db = db_session.get(Auto, car_temporal.id)
+            if car_db:
+                car_db.price = car_temporal.price
+                car_db.km = car_temporal.km
+                car_db.discount_offer = car_temporal.discount_offer
 
+                auto_oficial = car_db
+            else: # Si el NO auto existe
+                auto_oficial = car_temporal
+
+
+            # Idempotencia: revisamos si el auto ya ha sido procesado hoy
+            statement = select(FinancialPlan).where(
+                FinancialPlan.id_auto == auto_oficial.id,
+                FinancialPlan.fecha_captura == date.today()
+            )
+            if db_session.exec(statement).first():
+                continue
+
+            # Comenzamos la extraccion de datos financieros
+            logger.info("%s Extrayendo datos para el ID: %s, %s, %s", i, auto_oficial.id, auto_oficial.slug, auto_oficial.price)
+            time.sleep(random.uniform(1.5, 4)) # Simulamos una demora antes de cada request a la API
+            response = api_requester(auto_oficial.id, auto_oficial.slug, auto_oficial.price, session=current_session)
+            
             if response is None:
-                logger.error("No se obtuvo respuesta para el auto con ID: %s", car_id)
+                logger.error("No se obtuvo respuesta del servidor en el auto con ID: %s", auto_oficial.id)
                 continue
 
-            
             data_json = response.json()
             if 'offers' in data_json:
-
                 try:
                     paymentPlans = data_json['offers']['paymentPlan']['paymentOptions']['UPFRONT_VALUE']
                     inputData = data_json['offers']['inputData']
 
-                    planes_extraidos = extract_financial_info(car_id, paymentPlans, inputData, price)
-                    batch_buffer.extend(planes_extraidos)
+                    planes_extraidos = extract_financial_info(auto_oficial.id, paymentPlans, inputData, auto_oficial.price)
+                    for plan in planes_extraidos:
+                        new_plan = load_financial_plan(auto_oficial.id, plan)
+                        auto_oficial.planes.append(new_plan)
+
+                    batch_buffer.append(auto_oficial)
 
                 except Exception as e:
-                    logger.warning("No se encontro un llave para el carro: %s. Error: %s", car_id, e)
+                    logger.warning("No se encontro un llave para el carro: %s. Error: %s", auto_oficial.id, e)
                     continue
 
             else: 
-                logger.warning("Auto no disponible: %s", car_id)
+                logger.warning("Auto no disponible: %s", auto_oficial.id)
                 continue
-    
+
+
             if len(batch_buffer) >= BATCH_SIZE:
                 logger.info("Buffer lleno %s registros). Guardando batch...", len(batch_buffer))
-                save_batch_to_csv(batch_buffer, CSV_PATH)
-                batch_buffer = []
+                save_batch_to_db(batch_buffer, db_session)
+                batch_buffer.clear()
             
         if batch_buffer:
             logger.info("Guardando últimos registros pendientes...")
-            save_batch_to_csv(batch_buffer, CSV_PATH)
-            
+            save_batch_to_db(batch_buffer, db_session)
             logger.info("Proceso Terminado...")
 
 
