@@ -187,6 +187,19 @@ def load_new_car(car: Dict) -> Optional[Auto]:
         logger.warning("El auto con id: %s tiene los datos incompletos o corruptos: %s", car['id'], e)
 
 
+def reconcile_auto_state(db_session: Session, car_temporal: Auto) -> Auto:
+    car_db = db_session.get(Auto, car_temporal.id)
+    if car_db:
+        car_db.price = car_temporal.price
+        car_db.km = car_temporal.km
+        car_db.discount_offer = car_temporal.discount_offer
+
+        auto_oficial = car_db
+    else: # Si el NO auto existe
+        auto_oficial = car_temporal
+
+    return auto_oficial
+
 def main():
     #Aseguramos que la DDBB exista
     create_db_n_tables()
@@ -215,16 +228,7 @@ def main():
             if not car_temporal:
                 continue
 
-            car_db = db_session.get(Auto, car_temporal.id)
-            if car_db:
-                car_db.price = car_temporal.price
-                car_db.km = car_temporal.km
-                car_db.discount_offer = car_temporal.discount_offer
-
-                auto_oficial = car_db
-            else: # Si el NO auto existe
-                auto_oficial = car_temporal
-
+            auto_oficial = reconcile_auto_state(db_session, car_temporal)
 
             # Idempotencia: revisamos si el auto ya ha sido procesado hoy
             statement = select(FinancialPlan).where(
@@ -242,26 +246,24 @@ def main():
                 
                 if response is None:
                     logger.error("No se obtuvo respuesta del servidor en el auto con ID: %s", auto_oficial.id)
-                    continue
 
-                data_json = response.json()
-                if 'offers' in data_json:
-                    try:
-                        paymentPlans = data_json['offers']['paymentPlan']['paymentOptions']['UPFRONT_VALUE']
-                        inputData = data_json['offers']['inputData']
+                else:
+                    data_json = response.json()
+                    if 'offers' in data_json:
+                        try:
+                            paymentPlans = data_json['offers']['paymentPlan']['paymentOptions']['UPFRONT_VALUE']
+                            inputData = data_json['offers']['inputData']
 
-                        planes_extraidos = extract_financial_info(auto_oficial.id, paymentPlans, inputData, auto_oficial.price)
-                        for plan in planes_extraidos:
-                            new_plan = load_financial_plan(auto_oficial.id, plan)
-                            auto_oficial.planes.append(new_plan)
+                            planes_extraidos = extract_financial_info(auto_oficial.id, paymentPlans, inputData, auto_oficial.price)
+                            for plan in planes_extraidos:
+                                new_plan = load_financial_plan(auto_oficial.id, plan)
+                                auto_oficial.planes.append(new_plan)
 
-                    except Exception as e:
-                        logger.warning("No se encontro un llave para el carro: %s. Error: %s", auto_oficial.id, e)
-                        continue
+                        except Exception as e:
+                            logger.warning("No se encontro un llave para el carro: %s. Error: %s", auto_oficial.id, e)
 
-                else: 
-                    logger.warning("Auto no disponible: %s", auto_oficial.id)
-                    continue
+                    else: 
+                        logger.warning("Auto no disponible: %s", auto_oficial.id)
 
             batch_buffer.append(auto_oficial)
 
