@@ -10,12 +10,12 @@ class FinancialPlan(SQLModel, table=True):
     id_auto: str = Field(foreign_key="auto.id")
     
     #Datos del negocio
-    precio: int
+    precio: int | None
     tasa_servicio: float
     plazo: int
-    mensualidad: int
-    tasa_interes: float
-    seguro: float
+    mensualidad: int | None
+    tasa_interes: float | None 
+    seguro: float | None
     enganche_simulado: float
     enganche_min: float
     enganche_max: float
