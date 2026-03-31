@@ -33,13 +33,14 @@ class Auto(SQLModel, table=True):
     city: str
 
     #Datos necesarios para el negocio
-    price: int 
+    price: int | None
     year: int 
     km: int 
 
     #Datos que pueden ser nulos o vacios
     gear: str | None = None
-    discount_offer: int = Field(default=0)
+    discount_offer: bool = Field(default=False)
+    is_reserved: bool = Field(default=False)    
     details: Optional[str] | None = None
 
     #Lista de planes financieros que pertenecen al auto

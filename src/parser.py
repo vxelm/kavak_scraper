@@ -18,7 +18,8 @@ from src import settings
 SPAN_PRICE_PATTERN = re.compile(".*amount__large__price.*")
 FOOTER_PATTERN = re.compile(".*product_cardProduct__footerInfo.*")
 SUBTITLE_PATTERN = re.compile(".*Product__subtitle.*")
-BANNER_PATTERN = re.compile("Precio imbatible")
+HOT_SALE_PATTERN = re.compile("Precio imbatible")
+RESERVED_PATTERN = re.compile("Apartado")
 
 # Configurando logger
 setup_logging()
@@ -103,13 +104,13 @@ def extract_subtitle(card: Tag, car_id: str) -> Optional[Dict]:
     return subtitle_elements
 
 
-def extract_banner(card: Tag) -> int:
+def extract_banner(card: Tag, pattern: re.compile) -> int:
     """Extraccion de banners"""
-    hot_sale_flag = 0
-    banner = card.find(string=BANNER_PATTERN)
-    if banner:
-        hot_sale_flag = 1
-    return hot_sale_flag
+    banner = False
+    banner_tag = card.find(string=pattern)
+    if banner_tag:
+        banner = True
+    return banner
 
 
 def main(htmls_path):
@@ -139,8 +140,9 @@ def main(htmls_path):
                 price = extract_price(c, car_id)
                 city = extract_city(c, car_id)
                 subtitle = extract_subtitle(c, car_id)
-                hot_sale_flag = extract_banner(c)
-                
+                hot_sale_flag = extract_banner(c, HOT_SALE_PATTERN)
+                is_reserved = extract_banner(c, RESERVED_PATTERN)
+
                 try:
                     auto_valido = Autokavak(
                         id=car_id,
@@ -151,6 +153,7 @@ def main(htmls_path):
                         km=subtitle.get('km'),
                         gear=subtitle.get('shift'),
                         discount_offer=hot_sale_flag,
+                        is_reserved=is_reserved,
                         details=subtitle.get('details')
                     )
 
@@ -161,7 +164,7 @@ def main(htmls_path):
                         f.flush()
 
                 except ValidationError as e:
-                    logger.error("Datos corruptos en auto %s. Error: %s", car_id, e.errors())
+                    logger.error("Datos corruptos en auto %s en %s. Error: %s", car_id, file, e.errors())
 
 
 

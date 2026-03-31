@@ -234,36 +234,36 @@ def main():
             if db_session.exec(statement).first():
                 continue
 
-            # Comenzamos la extraccion de datos financieros
-            logger.info("%s Extrayendo datos para el ID: %s, %s, %s", i, auto_oficial.id, auto_oficial.slug, auto_oficial.price)
-            time.sleep(random.uniform(1.5, 4)) # Simulamos una demora antes de cada request a la API
-            response = api_requester(auto_oficial.id, auto_oficial.slug, auto_oficial.price, session=current_session)
-            
-            if response is None:
-                logger.error("No se obtuvo respuesta del servidor en el auto con ID: %s", auto_oficial.id)
-                continue
-
-            data_json = response.json()
-            if 'offers' in data_json:
-                try:
-                    paymentPlans = data_json['offers']['paymentPlan']['paymentOptions']['UPFRONT_VALUE']
-                    inputData = data_json['offers']['inputData']
-
-                    planes_extraidos = extract_financial_info(auto_oficial.id, paymentPlans, inputData, auto_oficial.price)
-                    for plan in planes_extraidos:
-                        new_plan = load_financial_plan(auto_oficial.id, plan)
-                        auto_oficial.planes.append(new_plan)
-
-                    batch_buffer.append(auto_oficial)
-
-                except Exception as e:
-                    logger.warning("No se encontro un llave para el carro: %s. Error: %s", auto_oficial.id, e)
+            if auto_oficial.price:
+                # Comenzamos la extraccion de datos financieros
+                logger.info("%s Extrayendo datos para el ID: %s, %s, %s", i, auto_oficial.id, auto_oficial.slug, auto_oficial.price)
+                time.sleep(random.uniform(1.5, 4)) # Simulamos una demora antes de cada request a la API
+                response = api_requester(auto_oficial.id, auto_oficial.slug, auto_oficial.price, session=current_session)
+                
+                if response is None:
+                    logger.error("No se obtuvo respuesta del servidor en el auto con ID: %s", auto_oficial.id)
                     continue
 
-            else: 
-                logger.warning("Auto no disponible: %s", auto_oficial.id)
-                continue
+                data_json = response.json()
+                if 'offers' in data_json:
+                    try:
+                        paymentPlans = data_json['offers']['paymentPlan']['paymentOptions']['UPFRONT_VALUE']
+                        inputData = data_json['offers']['inputData']
 
+                        planes_extraidos = extract_financial_info(auto_oficial.id, paymentPlans, inputData, auto_oficial.price)
+                        for plan in planes_extraidos:
+                            new_plan = load_financial_plan(auto_oficial.id, plan)
+                            auto_oficial.planes.append(new_plan)
+
+                    except Exception as e:
+                        logger.warning("No se encontro un llave para el carro: %s. Error: %s", auto_oficial.id, e)
+                        continue
+
+                else: 
+                    logger.warning("Auto no disponible: %s", auto_oficial.id)
+                    continue
+
+            batch_buffer.append(auto_oficial)
 
             if len(batch_buffer) >= BATCH_SIZE:
                 logger.info("Buffer lleno %s registros). Guardando batch...", len(batch_buffer))
