@@ -21,7 +21,7 @@ FINANCIAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 BASE_URL = "https://www.kavak.com/mx/seminuevos"
 MAX_WORKERS = 3
-REQUEST_TIMEOUT = 20
+REQUEST_TIMEOUT = 10
 USER_AGENTS = [
     "Mozilla/5.0 (Linux; Android 13; SM-S911U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Mobile Safari/537.36",
     "Mozilla/5.0 (iPhone17,5; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 FireKeepers/1.7.0",
