@@ -1,13 +1,13 @@
 import logging
 import sys
 import re
+from glob import glob
 
 from typing import List, Dict, Optional
 from datetime import datetime
 from bs4 import BeautifulSoup
 from pydantic import ValidationError
 from bs4.element import Tag
-from glob import glob
 
 from src.logger import setup_logging
 from src.schemas import Autokavak
@@ -21,8 +21,6 @@ SUBTITLE_PATTERN = re.compile(".*Product__subtitle.*")
 HOT_SALE_PATTERN = re.compile("Precio imbatible")
 RESERVED_PATTERN = re.compile("Apartado")
 
-# Configurando logger
-setup_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -82,7 +80,7 @@ def extract_city(card: Tag, car_id: str) -> Optional[str]:
     return None
 
 
-def extract_subtitle(card: Tag, car_id: str) -> Optional[Dict]:
+def extract_subtitle(card: Tag, car_id: str) -> Dict:
     """Extraccion del subtitulo con anio, Kilometraje, Engine y Tipo de caja """
     # "subtitulo": ["2019 ", " 71,021 km ", " 2.0 EX AUTO ", " Autom\u00e1tico"]
     subtitle_elements = {"year": None, "km": None, "details": None, "shift": None}
@@ -104,7 +102,7 @@ def extract_subtitle(card: Tag, car_id: str) -> Optional[Dict]:
     return subtitle_elements
 
 
-def extract_banner(card: Tag, pattern: re.compile) -> int:
+def extract_banner(card: Tag, pattern: re.Pattern[str]) -> bool:
     """Extraccion de banners"""
     banner = False
     banner_tag = card.find(string=pattern)
@@ -113,7 +111,9 @@ def extract_banner(card: Tag, pattern: re.compile) -> int:
     return banner
 
 
-def main(htmls_path):
+def main(htmls_path: List[str]) -> None:
+    # Configurando logger
+    setup_logging()
     
     # Si no se le pasa un archivo json, tomara el ultimo
     date_filename = get_date_filename(htmls_path[0])
