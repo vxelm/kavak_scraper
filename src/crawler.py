@@ -1,19 +1,18 @@
+import logging
+import random
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from src.logger import setup_logging
-from src import settings
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-
-from pathlib import Path
-import threading
-import requests
-import logging
-import random
-import time
+from src import settings
+from src.logger import setup_logging
 
 logger = logging.getLogger(__name__)
 thread_local = threading.local()
