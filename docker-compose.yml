@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # 1. EL ALMACÉN DE DATOS (Postgres)
+  # EL ALMACÉN DE DATOS (Postgres)
   warehouse:
     image: postgres:15-alpine
     container_name: kavak_postgres
@@ -16,7 +16,7 @@ services:
     networks:
       - data_network
 
-  # 2. LA INTERFAZ DE GESTIÓN (pgAdmin)
+  # INTERFAZ DE GESTIÓN (pgAdmin)
   pgadmin:
     image: dpage/pgadmin4
     container_name: kavak_pgadmin

@@ -2,7 +2,6 @@
 *.conf
 *.db
 
-.vscode/
 config/
 data/
 logs/
@@ -10,3 +9,4 @@ logs/
 */__pycache__/
 .ipynb_checkpoints/
 CLAUDE.md
+.vscode/
