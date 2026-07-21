@@ -1,4 +1,9 @@
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+from sqlalchemy.engine import URL
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -30,6 +35,27 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
 ]
 
-#SQLite
-DB_PATH = PROCESSED_DATA / "kavak_oltp.db"
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+
+def credential_validation() -> None:
+    required = ['POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB']
+    missing = [param for param in required if param not in os.environ]
+    if missing:
+        raise RuntimeError(f"Parametros faltantes para postgreSQL: {missing}")
+    
+def build_url_db() -> URL:
+    credential_validation()
+
+    user = os.environ["POSTGRES_USER"]
+    passwd = os.environ["POSTGRES_PASSWORD"]
+    db = os.environ["POSTGRES_DB"]
+    host = os.environ["POSTGRES_HOST"]
+    port = os.environ["POSTGRES_PORT"]
+
+    return URL.create(
+        drivername="postgresql+psycopg2",
+        username=user,
+        password=passwd,
+        host=host,
+        port=int(port),
+        database=db
+    )
