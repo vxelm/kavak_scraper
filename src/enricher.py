@@ -211,9 +211,9 @@ def main():
     
     with open(raw_json_path, 'r', encoding='utf-8') as f, Session(engine) as db_session:
         for i, line in enumerate(f):
-            if i>=5:
-                logger.info("Smoke test finalizado. Deteniendo ejecucion")
-                break
+            # if i>=5:
+            #     logger.info("Smoke test finalizado. Deteniendo ejecucion")
+            #     break
 
             # Maneja la sesion para no quemarla
             if i > 0 and i % 50 == 0:
