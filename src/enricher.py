@@ -6,7 +6,7 @@ from src.models import Auto, FinancialPlan
 from pydantic import ValidationError
 
 from src.logger import setup_logging
-from src.database import engine, create_db_n_tables
+from src.database import get_engine, create_db_n_tables
 from sqlmodel import Session, select
 from src import settings
 
@@ -209,7 +209,7 @@ def main():
     current_session = get_fresh_session()
     logger.info("Sesion inical creada.")
     
-    with open(raw_json_path, 'r', encoding='utf-8') as f, Session(engine) as db_session:
+    with open(raw_json_path, 'r', encoding='utf-8') as f, Session(get_engine()) as db_session:
         for i, line in enumerate(f):
             # if i>=5:
             #     logger.info("Smoke test finalizado. Deteniendo ejecucion")
