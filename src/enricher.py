@@ -100,7 +100,7 @@ def plan_info_extractor(plan: Dict, auto_id: str):
         if plan['insurance']:
             info['seguro'] = plan['insurance']['installmentAmount']
 
-    except Exception as e:
+    except (KeyError, TypeError) as e:
         logger.error("Sucedio un error extrayendo los planes del auto: %s. Error: %s", auto_id, e)
     return info
 
@@ -113,7 +113,7 @@ def upfront_info_extractor(inputData: Dict[str, Any], auto_id: str) -> Optional[
         max_upfront_value = inputData['max']
         return value, min_upfront_value, max_upfront_value
     
-    except Exception as e:
+    except (KeyError, TypeError) as e:
         logger.error("Sucedio un error extrayendo los enganches del auto: %s. Error: %s", auto_id, e)
         return None
 
@@ -153,7 +153,7 @@ def save_batch_to_db(batch_data: List, db_session: Session) -> None:
     try:
         db_session.add_all(batch_data)
         db_session.commit()
-    except Exception as e:
+    except (KeyError, TypeError) as e:
         logger.error("Error al intentar guardar los datos del batch: %s", e)
 
 
@@ -259,7 +259,7 @@ def main():
                                 new_plan = load_financial_plan(auto_oficial.id, plan)
                                 auto_oficial.planes.append(new_plan)
 
-                        except Exception as e:
+                        except (KeyError, TypeError) as e:
                             logger.warning("No se encontro un llave para el carro: %s. Error: %s", auto_oficial.id, e)
 
                     else: 
